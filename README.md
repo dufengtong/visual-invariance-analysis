@@ -15,6 +15,10 @@ using a stimulus set of:
 - 4 images per category
 - 32 total images
 
+<p align="center">
+  <img src="figures/images.png" width="100%">
+</p>
+
 ---
 
 ## Experimental Pipeline
@@ -52,6 +56,7 @@ where $R_{AA}$ and $R_{BB}$ are the mean within-category correlations for catego
 
 Pair invariance is computed across all $\binom{8}{2} = 28$ category pairs.
 
+
 ---
 
 ## Results
@@ -60,11 +65,11 @@ Pair invariance is computed across all $\binom{8}{2} = 28$ category pairs.
 
 The correlation matrices show how representations evolve layer by layer. Darker diagonal blocks indicate strong within-category similarity, while lighter off-diagonal blocks indicate separation between categories.
 
-**DINOv3** maintains high overall correlation magnitude across all layers, with the diagonal block structure emerging gradually:
+**DINOv3** maintains high overall correlation magnitude across all layers, with the diagonal block structure emerging gradually due to the decrease in the between-category correlation:
 
 ![DINOv3 correlation matrix](figures/dinoV3_corr_matrix.png)
 
-**DINOv1** shows a strong decorrelation in intermediate patch token layers (roughly layers 4–8), which partially recovers in later layers. The CLS token representations are uniformly decorrelated across categories throughout:
+**DINOv1** shows a strong decorrelation in intermediate patch token layers (roughly layers 4–8), but becomes more correlated in the later layers. The CLS token representations are uniformly decorrelated across categories throughout:
 
 ![DINOv1 correlation matrix](figures/dinoV1_corr_matrix.png)
 
@@ -78,21 +83,51 @@ The correlation matrices show how representations evolve layer by layer. Darker 
 
 CNN representations show a progressive structuring across layers in all three models, with increasingly clear category block structure from early to late layers.
 
+All three CNNs start with near-uniform high correlation in early layers, and develop progressively more distinct category blocks in deeper layers. VGG16 shows notably faster decorrelation in early layers compared to AlexNet and ResNet50.
+
+The stronger intermediate decorrelation in VGG16 may be related to its greater depth and the absence of skip connections, which forces each layer to carry more of the abstract information. ResNet50's skip connections may smooth this process across layers.
+
+For **AlexNet**, we extracted feature maps after each convolutional stage (post-ReLU and post-pooling when applicable). Specifically:
+
+1. Conv1 + ReLU + MaxPool  
+2. Conv2 + ReLU + MaxPool  
+3. Conv3 + ReLU  
+4. Conv4 + ReLU  
+5. Conv5 + ReLU + MaxPool  
+
 <p align="center">
   <img src="figures/alexnet_corr_matrix.png" width="70%">
 </p>
+
+For **VGG16**, we extracted the output of the **last convolutional layer within each block**, after ReLU activation and before the classifier. Specifically:
+
+1. Block1: after Conv1_2  
+2. Block2: after Conv2_2  
+3. Block3: after Conv3_3  
+4. Block4: after Conv4_3  
+5. Block5: after Conv5_3  
 
 <p align="center">
   <img src="figures/vgg_corr_matrix.png" width="70%">
 </p>
 
+
+For **ResNet50**, we extracted:
+
+1. The output after the initial convolution + maxpool 
+
+
+and the output of the **last residual block in each stage**:
+
+  2. model Layer1 
+  3. model Layer2 
+  4. model Layer3 
+  5. model Layer4 
+
 <p align="center">
   <img src="figures/resnet_corr_matrix.png" width="70%">
 </p>
 
-All three CNNs start with near-uniform high correlation in early layers, and develop progressively more distinct category blocks in deeper layers. VGG16 shows notably faster decorrelation in early layers compared to AlexNet and ResNet50.
-
-The stronger intermediate decorrelation in VGG16 may be related to its greater depth and the absence of skip connections, which forces each layer to carry more of the abstract information. ResNet50's skip connections may smooth this process across layers.
 
 ---
 
@@ -111,7 +146,21 @@ The stronger intermediate decorrelation in VGG16 may be related to its greater d
 
 ## Summary
 
-Training objective and architecture both shape representational invariance, but in distinct ways. The training dataset scale does not appear to be a primary driver of invariance differences here, possibly because all datasets are large enough to capture the features relevant to this small stimulus set.
+The key finding from the ViT analysis is that **self-supervised training (DINOv1 and DINOv3) 
+produces final CLS token representations with higher invariance than supervised 
+training**, despite never receiving explicit category labels. This suggests that 
+self-supervised objectives are sufficient for building 
+invariant texture representations. 
+
+For CNN models, architecture and depth are the dominant 
+factors: VGG16 and ResNet50 accumulate substantially more invariance across layers than AlexNet.
+
+The training dataset does not appear to be a primary driver of invariance differences.
+DINOv1 and Supervised ViT were both trained on ImageNet, while DINOv3 was trained on
+a larger curated dataset (LVD-1689M), yet both DINO models show similar levels of final CLS token
+invariance. This suggests that the differences we observe are more likely driven by
+training objective and architecture than by dataset content, as all datasets contain
+sufficient images with texture statistics similar to our stimulus set.
 
 ---
 
