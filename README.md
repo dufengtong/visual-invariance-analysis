@@ -36,6 +36,19 @@ All ViTs are implemented in PyTorch using HuggingFace Transformers.
 
 ---
 
+## Model Structures & Feature Extraction
+
+| Model | Structure | Extracted features |
+|---|---|---|
+| **AlexNet** | 5 conv layers (C1–C5), 1 conv per block | Output after each conv (5 total) |
+| **VGG16** | 13 conv layers grouped into 5 blocks (B1–B5) by max-pool; blocks have 2, 2, 3, 3, 3 convs respectively | Output after each max-pool (5 per block) or after each conv (13 per layer) |
+| **ResNet50** | Stem (1 conv) + 4 residual stages (L1–L4) with 3, 4, 6, 3 bottleneck blocks; each bottleneck has 3 convs (1×1 → 3×3 → 1×1 + residual add) → 49 convs total | Per block: output after each stage (5 total). Per layer: output at each conv step using `make_hook` (captures output) and `make_pre_hook` (captures input) → 49 total |
+| **DINOv1** | ViT-B/8, 12 transformer blocks | Patch token features (mean-pooled or flattened) after each block |
+| **DINOv3** | ViT-B/16 with 4 register tokens, 12 transformer blocks | Same as DINOv1; register tokens excluded |
+| **Supervised ViT** | ViT-B/16 (`google/vit-base-patch16-224`), 12 transformer blocks | Same as DINOv1 |
+
+---
+
 ## Invariance Measure
 
 ### Representation Matrix
@@ -141,6 +154,33 @@ and the output of the **last residual block in each stage**:
 **ViT models (left):** Patch token invariance rises steeply in early-to-middle layers for all three models and then plateaus or declines. DINOv1 patch tokens show a distinctive inverted-U pattern, peaking around layer 6 with notably higher maximum invariance (~0.44) than DINOv3 (~0.30) or Supervised ViT (~0.27) before declining sharply in later layers. DINOv3 and Supervised ViT patch tokens both plateau earlier and remain more stable. CLS token invariance is substantially lower across all models throughout the network, with a sharp increase only in the final layers. The final CLS tokens of the two self-supervised models reach higher invariance than the supervised ViT, consistent with self-supervised objectives learning more invariant representations without explicit category labels.
 
 **CNN models (right):** All three CNNs show a monotonic increase in invariance across layers. VGG16 and ResNet50 reach substantially higher final invariance (~0.52–0.54) than AlexNet (~0.26). AlexNet plateaus early and shows a slight decrease at the final layer.
+
+---
+
+### 4. Layer-wise Invariance — Pooled vs Raw Features
+
+We re-computed invariance using two feature representations at each layer:
+
+- **Pooled**: spatial or patch features averaged across space → `(B, C)` or `(B, 768)`. Discards position information, summarises *what* is represented.
+- **Raw**: spatial or patch features flattened → `(B, C×H×W)` or `(B, 64×768)`. Retains full spatial layout.
+
+#### CNN Models
+
+<p align="center">
+  <img src="figures/cnn_invariance_block.png" width="90%">
+</p>
+
+<p align="center">
+  <img src="figures/cnn_invariance_layer.png" width="90%">
+</p>
+
+A notable exception is **ResNet50 at the per-layer granularity (49 points)**: the raw invariance curve fluctuates rather than increasing smoothly. This arises directly from the bottleneck design. 
+
+#### ViT Models
+
+<p align="center">
+  <img src="figures/vit_invariance_combined.png" width="90%">
+</p>
 
 ---
 
